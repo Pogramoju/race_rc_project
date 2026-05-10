@@ -292,7 +292,6 @@ if not models_loaded:
     st.sidebar.warning("⚠️ Models not found. Run the pipeline first to save models to `models/`.")
 st.sidebar.markdown("---")
 st.sidebar.caption("AL2002 Lab Project — FAST NUCES")
-st.sidebar.caption("⚠️ AI-generated content may contain errors. Verify answers independently.")
 
 
 # SCREEN 1 — Article Input
