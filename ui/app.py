@@ -1,8 +1,3 @@
-"""
-RACE Quiz System — Streamlit UI
-4 Screens: Article Input, Quiz View, Hint Panel, Analytics Dashboard
-Rubric §6: All 4 screens present; smooth UX; error handling
-"""
 import streamlit as st
 import pandas as pd
 import numpy as np
