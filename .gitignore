@@ -18,7 +18,7 @@ venv/
 # Jupyter
 .ipynb_checkpoints/
 
-# Data & Models (large binary files — don't push to GitHub)
+# Data & Models
 data/raw/*.csv
 data/processed/
 models/model_a/traditional/*.pkl
