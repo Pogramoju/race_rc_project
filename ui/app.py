@@ -299,9 +299,9 @@ st.sidebar.markdown("---")
 st.sidebar.caption("AL2002 Lab Project — FAST NUCES")
 st.sidebar.caption("⚠️ AI-generated content may contain errors. Verify answers independently.")
 
-
+# ════════════════════════════════════════════════════════════════════════════
 # SCREEN 1 — Article Input
-
+# ════════════════════════════════════════════════════════════════════════════
 if screen == "📝 Article Input":
     st.markdown("## 📝 Screen 1 — Article Input")
     st.markdown("Load a random reading comprehension from the **RACE dataset** to generate a quiz.")
@@ -382,9 +382,9 @@ if screen == "📝 Article Input":
     else:
         st.info("👆 Click **Load Random RACE Passage** to get started.")
 
-
+# ════════════════════════════════════════════════════════════════════════════
 # SCREEN 2 — Quiz View
-
+# ════════════════════════════════════════════════════════════════════════════
 elif screen == "❓ Quiz View":
     st.markdown("## ❓ Screen 2 — Question & Answer Quiz")
 
@@ -462,9 +462,9 @@ elif screen == "❓ Quiz View":
                             f'{verifier_tag}</div>',
                             unsafe_allow_html=True)
 
-
+# ════════════════════════════════════════════════════════════════════════════
 # SCREEN 3 — Hint Panel
-
+# ════════════════════════════════════════════════════════════════════════════
 elif screen == "💡 Hint Panel":
     st.markdown("## 💡 Screen 3 — Graduated Hints")
 
@@ -501,11 +501,11 @@ elif screen == "💡 Hint Panel":
         st.markdown("---")
         st.progress(min(used / max(total, 1), 1.0), text=f"Hints used: {used}/{total}")
 
-
+# ════════════════════════════════════════════════════════════════════════════
 # SCREEN 4 — Analytics Dashboard
-
+# ════════════════════════════════════════════════════════════════════════════
 elif screen == "📊 Analytics Dashboard":
-    st.markdown("## 📊 Screen 4 — Developer / Analytics Dashboard")
+    st.markdown("## 📊 Screen 4 — NLG Evaluation Dashboard")
 
     # Load persisted metrics if available
     metrics_path = os.path.join(MODEL_DIR, 'metrics.json')
@@ -515,125 +515,124 @@ elif screen == "📊 Analytics Dashboard":
         with open(metrics_path, 'r') as f:
             metrics = json.load(f)
 
-    tab1, tab2, tab3 = st.tabs(["📈 Model A Performance", "📉 Model B Performance",
+    tab1, tab2, tab3 = st.tabs(["📈 Answer & Question NLG",
+                                 "📉 Distractor & Hint NLG",
                                  "📋 Session Log"])
 
-    # --- Tab 1: Model A metrics ---
+    def _fmt(v):
+        """Format a metric value as a string."""
+        if v is None or v == 0:
+            return '—'
+        return f"{v:.4f}"
+
+    # --- Tab 1: Answer selection & Question generation NLG ---
     with tab1:
-        st.markdown("### Model A — Answer Verifier Performance")
-        ma = metrics.get('model_a', {}) if metrics else {}
-        rf_a = f"{ma.get('rf_acc', 0.7689)*100:.2f}%" if ma else "76.89%"
-        svm_a = f"{ma.get('svm_acc', 0.75)*100:.2f}%" if ma else "75.00%"
-        lr_a = f"{ma.get('lr_acc', 0.5355)*100:.2f}%" if ma else "53.55%"
-        rf_f = f"{ma.get('rf_f1', 0.6713)*100:.2f}%" if ma else "67.13%"
+        st.markdown("### Answer Selection — NLG Metrics")
+        te = metrics.get('test', {}) if metrics else {}
 
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{rf_a}</div>'
-                        '<div class="metric-label">RF Accuracy</div></div>', unsafe_allow_html=True)
-        with c2:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{svm_a}</div>'
-                        '<div class="metric-label">SVM Accuracy</div></div>', unsafe_allow_html=True)
-        with c3:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{lr_a}</div>'
-                        '<div class="metric-label">LR Accuracy</div></div>', unsafe_allow_html=True)
-        with c4:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{rf_f}</div>'
-                        '<div class="metric-label">RF Macro-F1</div></div>', unsafe_allow_html=True)
+        c1, c2, c3, c4, c5 = st.columns(5)
+        nlg_cards = [
+            ('BLEU', te.get('answer_bleu')),
+            ('ROUGE-1', te.get('answer_rouge1')),
+            ('ROUGE-2', te.get('answer_rouge2')),
+            ('ROUGE-L', te.get('answer_rougeL')),
+            ('METEOR', te.get('answer_meteor')),
+        ]
+        for col, (label, val) in zip([c1, c2, c3, c4, c5], nlg_cards):
+            with col:
+                st.markdown(f'<div class="metric-card"><div class="metric-value">'
+                            f'{_fmt(val)}</div>'
+                            f'<div class="metric-label">{label}</div></div>',
+                            unsafe_allow_html=True)
 
-        # ── Precision & Recall ──
-        rf_p = f"{ma.get('rf_precision', 0)*100:.2f}%" if ma and ma.get('rf_precision') else "—"
-        rf_r = f"{ma.get('rf_recall', 0)*100:.2f}%" if ma and ma.get('rf_recall') else "—"
-        svm_p = f"{ma.get('svm_precision', 0)*100:.2f}%" if ma and ma.get('svm_precision') else "—"
-        svm_r = f"{ma.get('svm_recall', 0)*100:.2f}%" if ma and ma.get('svm_recall') else "—"
-        c5, c6, c7, c8 = st.columns(4)
-        with c5:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{rf_p}</div>'
-                        '<div class="metric-label">RF Precision</div></div>', unsafe_allow_html=True)
-        with c6:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{rf_r}</div>'
-                        '<div class="metric-label">RF Recall</div></div>', unsafe_allow_html=True)
-        with c7:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{svm_p}</div>'
-                        '<div class="metric-label">SVM Precision</div></div>', unsafe_allow_html=True)
-        with c8:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{svm_r}</div>'
-                        '<div class="metric-label">SVM Recall</div></div>', unsafe_allow_html=True)
-
-        # ── Confusion Matrix ──
-        st.markdown("---")
-        st.markdown("#### Model A — Confusion Matrix")
-        if ma.get('confusion_matrix'):
-            import matplotlib.pyplot as plt
-            import seaborn as sns
-            cm = np.array(ma['confusion_matrix'])
-            fig, ax = plt.subplots(figsize=(5, 4))
-            sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=ax,
-                        xticklabels=['Incorrect', 'Correct'],
-                        yticklabels=['Incorrect', 'Correct'])
-            ax.set_xlabel('Predicted'); ax.set_ylabel('Actual')
-            ax.set_title('Model A — Confusion Matrix')
-            st.pyplot(fig)
-        else:
-            st.caption("⚠️ Confusion matrix will appear after running the notebook evaluation pipeline.")
-
-        st.markdown("---")
-        st.markdown("#### Comparison: Supervised vs Unsupervised vs Semi-Supervised")
-        sil = metrics.get('silhouette', '—') if metrics else '—'
-        comp = pd.DataFrame({
-            'Model': ['Random Forest', 'Linear SVM', 'Logistic Reg.',
-                      'Soft Ensemble', 'K-Means (k=20)', 'Label Propagation'],
-            'Paradigm': ['Supervised', 'Supervised', 'Supervised',
-                         'Supervised (Ensemble)', 'Unsupervised', 'Semi-Supervised'],
-            'Accuracy': [rf_a, svm_a, lr_a,
-                         f"{ma.get('ens_acc', 0)*100:.2f}%" if ma else '—',
-                         '—',
-                         f"{ma.get('lp_acc', 0)*100:.2f}%" if ma else '—'],
-            'Macro-F1': [rf_f,
-                         f"{ma.get('svm_f1', 0)*100:.2f}%" if ma else '—',
-                         f"{ma.get('lr_f1', 0)*100:.2f}%" if ma else '—',
-                         f"{ma.get('ens_f1', 0)*100:.2f}%" if ma else '—',
-                         '—',
-                         f"{ma.get('lp_f1', 0)*100:.2f}%" if ma else '—'],
-            'Silhouette': ['—', '—', '—', '—', str(sil), '—'],
-        })
-        st.dataframe(comp, use_container_width=True, hide_index=True)
-
-    # --- Tab 2: Model B metrics ---
-    with tab2:
-        st.markdown("### Model B — Distractor & Hint Generator Performance")
-        mb = metrics.get('model_b', {}) if metrics else {}
-        dp = f"{mb.get('dist_precision', 0)*100:.2f}%" if mb.get('dist_precision') else '—'
-        dr = f"{mb.get('dist_recall', 0)*100:.2f}%" if mb.get('dist_recall') else '—'
-        df1 = f"{mb.get('dist_f1', 0)*100:.2f}%" if mb.get('dist_f1') else '—'
-
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{dp}</div>'
-                        '<div class="metric-label">Distractor Precision</div></div>',
-                        unsafe_allow_html=True)
-        with c2:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{dr}</div>'
-                        '<div class="metric-label">Distractor Recall</div></div>',
-                        unsafe_allow_html=True)
-        with c3:
-            st.markdown(f'<div class="metric-card"><div class="metric-value">{df1}</div>'
-                        '<div class="metric-label">Distractor F1</div></div>',
-                        unsafe_allow_html=True)
-
-        if mb.get('hint_acc'):
+        em = te.get('exact_match')
+        if em is not None:
             st.markdown("---")
-            st.markdown("#### Hint LR Evaluation")
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.metric("Hint Accuracy", f"{mb['hint_acc']*100:.2f}%")
-            with c2:
-                st.metric("Hint Macro-F1", f"{mb['hint_f1']*100:.2f}%")
-            with c3:
-                st.metric("Hint R² Score", f"{mb['hint_r2']:.4f}")
+            st.metric("Exact Match Score", f"{em:.4f}")
+
+        # Question Generation NLG
+        if te.get('qgen_bleu'):
+            st.markdown("---")
+            st.markdown("### Question Generation — NLG Metrics")
+            c1, c2, c3, c4, c5 = st.columns(5)
+            qgen_cards = [
+                ('BLEU', te.get('qgen_bleu')),
+                ('ROUGE-1', te.get('qgen_rouge1')),
+                ('ROUGE-2', te.get('qgen_rouge2')),
+                ('ROUGE-L', te.get('qgen_rougeL')),
+                ('METEOR', te.get('qgen_meteor')),
+            ]
+            for col, (label, val) in zip([c1, c2, c3, c4, c5], qgen_cards):
+                with col:
+                    st.markdown(f'<div class="metric-card">'
+                                f'<div class="metric-value">{_fmt(val)}</div>'
+                                f'<div class="metric-label">QGen {label}</div></div>',
+                                unsafe_allow_html=True)
+
+        # Summary table
+        st.markdown("---")
+        st.markdown("#### NLG Metrics Summary")
+        summary_data = {
+            'Metric': ['BLEU', 'ROUGE-1', 'ROUGE-2', 'ROUGE-L', 'METEOR', 'Exact Match'],
+            'Answer Selection': [_fmt(te.get('answer_bleu')),
+                                  _fmt(te.get('answer_rouge1')),
+                                  _fmt(te.get('answer_rouge2')),
+                                  _fmt(te.get('answer_rougeL')),
+                                  _fmt(te.get('answer_meteor')),
+                                  _fmt(te.get('exact_match'))],
+            'Question Gen.': [_fmt(te.get('qgen_bleu')),
+                              _fmt(te.get('qgen_rouge1')),
+                              _fmt(te.get('qgen_rouge2')),
+                              _fmt(te.get('qgen_rougeL')),
+                              _fmt(te.get('qgen_meteor')),
+                              '—'],
+        }
+        st.dataframe(pd.DataFrame(summary_data), use_container_width=True,
+                     hide_index=True)
 
         if not metrics:
-            st.caption("⚠️ Run the notebook to compute and persist these metrics.")
+            st.caption("⚠️ Run the pipeline to compute and persist NLG metrics.")
+
+    # --- Tab 2: Distractor & Hint NLG ---
+    with tab2:
+        st.markdown("### Distractor Generation — NLG Metrics")
+        mb = metrics.get('model_b', {}) if metrics else {}
+
+        c1, c2, c3, c4 = st.columns(4)
+        dist_cards = [
+            ('BLEU', mb.get('dist_bleu')),
+            ('ROUGE-1', mb.get('dist_rouge1')),
+            ('ROUGE-L', mb.get('dist_rougeL')),
+            ('METEOR', mb.get('dist_meteor')),
+        ]
+        for col, (label, val) in zip([c1, c2, c3, c4], dist_cards):
+            with col:
+                st.markdown(f'<div class="metric-card"><div class="metric-value">'
+                            f'{_fmt(val)}</div>'
+                            f'<div class="metric-label">Dist. {label}</div></div>',
+                            unsafe_allow_html=True)
+
+        # Hint NLG metrics
+        if mb.get('hint_bleu') or mb.get('hint_rouge1'):
+            st.markdown("---")
+            st.markdown("### Hint Generation — NLG Metrics")
+            c1, c2, c3, c4, c5 = st.columns(5)
+            hint_cards = [
+                ('BLEU', mb.get('hint_bleu')),
+                ('ROUGE-1', mb.get('hint_rouge1')),
+                ('ROUGE-2', mb.get('hint_rouge2')),
+                ('ROUGE-L', mb.get('hint_rougeL')),
+                ('METEOR', mb.get('hint_meteor')),
+            ]
+            for col, (label, val) in zip([c1, c2, c3, c4, c5], hint_cards):
+                with col:
+                    st.markdown(f'<div class="metric-card">'
+                                f'<div class="metric-value">{_fmt(val)}</div>'
+                                f'<div class="metric-label">Hint {label}</div></div>',
+                                unsafe_allow_html=True)
+
+        if not metrics:
+            st.caption("⚠️ Run the pipeline to compute NLG metrics.")
 
     # --- Tab 3: Session log ---
     with tab3:
@@ -658,3 +657,4 @@ elif screen == "📊 Analytics Dashboard":
                                        "text/csv", use_container_width=True)
         else:
             st.info("No quiz attempts yet. Complete a quiz to see results here.")
+

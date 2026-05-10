@@ -31,7 +31,6 @@ MAX_FEATURES = 10_000
 
 # ── Text Cleaning ────────────────────────────────────────────────────────────
 def clean_text(text, lowercase=True, remove_punct=True, remove_stopwords=False):
-    """Clean and normalise a text string."""
     if not isinstance(text, str):
         text = str(text) if text is not None else ''
     text = re.sub(r'\s+', ' ', text).strip()
@@ -49,13 +48,11 @@ def clean_text(text, lowercase=True, remove_punct=True, remove_stopwords=False):
 
 
 def tokenize(text):
-    """Tokenize text after cleaning and removing stopwords."""
     return clean_text(text, remove_stopwords=True).split()
 
 
 # ── Data Loading ─────────────────────────────────────────────────────────────
 def setup_environment():
-    """Checks if running in Colab or a local IDE like PyCharm."""
     try:
         import google.colab
         is_colab = True
@@ -75,7 +72,6 @@ def setup_environment():
 
 
 def load_race_csv(path):
-    """Load a RACE CSV file and resolve the answer text from option columns."""
     df = pd.read_csv(path)
     df.columns = [c.strip().lower() for c in df.columns]
     option_cols = [c for c in df.columns if c.startswith('option')]

@@ -5,10 +5,6 @@ Extracted from notebook cells 40, 42, 44.
 """
 import re, numpy as np
 from sklearn.preprocessing import normalize as sk_normalize
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (accuracy_score, f1_score, r2_score,
-    classification_report, confusion_matrix)
-from sklearn.model_selection import train_test_split
 from src.preprocessing import clean_text, tokenize
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -78,55 +74,69 @@ def generate_hints(article, question, answer, n_hints=3):
     top_idx = sorted(np.argsort(scores)[::-1][:n_hints])
     return [sentences[i] for i in top_idx]
 
-# ── Evaluation ──────────────────────────────────────────────────────────────
+# ── NLG Evaluation ──────────────────────────────────────────────────────────
 def evaluate_distractors(test_df, ohe_verify, n_eval=100):
-    """Evaluate distractor quality: Precision/Recall/F1 + confusion matrix."""
-    dist_correct = dist_total = dist_relevant = 0
+    """Evaluate distractor quality using BLEU, ROUGE, METEOR.
+    Compares generated distractors against the gold wrong options."""
+    from src.evaluate import compute_all_nlg_metrics
+    all_bleu, all_r1, all_rL, all_meteor = [], [], [], []
     eval_rows = test_df.head(n_eval)
-    for _,row in eval_rows.iterrows():
-        article = str(row.get('article','')); answer = str(row.get('answer_text',''))
+    option_cols = [c for c in test_df.columns if c.lower() in ('a','b','c','d')]
+    if not option_cols:
+        option_cols = [c for c in test_df.columns if c.lower().startswith('option')]
+
+    for _, row in eval_rows.iterrows():
+        article = str(row.get('article', ''))
+        answer = str(row.get('answer_text', ''))
         dists = generate_distractors(article, answer, ohe_verify, top_n=3)
+        # Gold wrong options
+        gold_wrong = []
+        for c in option_cols:
+            opt = str(row.get(c, ''))
+            if clean_text(opt) != clean_text(answer):
+                gold_wrong.append(opt)
+        # Compare each generated distractor against best-matching gold option
         for d in dists:
-            dist_total += 1
-            if clean_text(d) != clean_text(answer): dist_correct += 1
-            d_tok = set(tokenize(d)); a_tok = set(tokenize(article))
-            if len(d_tok & a_tok) > 0: dist_relevant += 1
-    p = dist_correct/max(dist_total,1)
-    r = dist_relevant/max(dist_total,1)
-    f = 2*p*r/max(p+r,1e-9)
-    print(f'Distractor P={p:.4f} R={r:.4f} F1={f:.4f} (n={dist_total})')
-    # Confusion matrix
-    preds, golds = [], []
-    for _,row in eval_rows.iterrows():
-        art = str(row.get('article','')); ans = str(row.get('answer_text',''))
-        for d in generate_distractors(art,ans,ohe_verify,top_n=3):
-            preds.append(1 if clean_text(d)!=clean_text(ans) else 0)
-            golds.append(1)
-    cm = confusion_matrix(golds, preds)
-    print('Distractor CM:'); print(cm)
-    return {'dist_precision':p,'dist_recall':r,'dist_f1':f}, cm
+            if not gold_wrong:
+                continue
+            best = max(gold_wrong,
+                       key=lambda g: compute_all_nlg_metrics(g, d)['rougeL'])
+            m = compute_all_nlg_metrics(best, d)
+            all_bleu.append(m['bleu'])
+            all_r1.append(m['rouge1'])
+            all_rL.append(m['rougeL'])
+            all_meteor.append(m['meteor'])
+
+    results = {
+        'dist_bleu':   np.mean(all_bleu)   if all_bleu else 0.0,
+        'dist_rouge1': np.mean(all_r1)     if all_r1 else 0.0,
+        'dist_rougeL': np.mean(all_rL)     if all_rL else 0.0,
+        'dist_meteor': np.mean(all_meteor) if all_meteor else 0.0,
+    }
+    print(f'Distractor NLG (n={len(all_bleu)}):')
+    print(f'  BLEU={results["dist_bleu"]:.4f}  ROUGE-1={results["dist_rouge1"]:.4f}  '
+          f'ROUGE-L={results["dist_rougeL"]:.4f}  METEOR={results["dist_meteor"]:.4f}')
+    return results
 
 def evaluate_hints(train_sample, n_eval=200):
-    """Train LR on sentence features and evaluate hint quality."""
-    hint_X, hint_y = [], []
-    for _,row in train_sample.head(n_eval).iterrows():
-        art = str(row.get('article','')); q = str(row.get('question',''))
-        ans = str(row.get('answer_text',''))
+    """Evaluate hint quality using BLEU/ROUGE/METEOR.
+    Compares generated hints against gold answer text."""
+    from src.evaluate import evaluate_generation_nlg
+    gold_refs, gen_hints_flat = [], []
+    for _, row in train_sample.head(n_eval).iterrows():
+        art = str(row.get('article', ''))
+        q = str(row.get('question', ''))
+        ans = str(row.get('answer_text', ''))
         sents = split_sentences(art)
-        if not sents: continue
-        feats = build_sentence_features(sents, q, ans)
-        for i,s in enumerate(sents):
-            hint_X.append(feats[i])
-            hint_y.append(1 if sentence_keyword_overlap(s,ans)>0.3 else 0)
-    hint_X, hint_y = np.array(hint_X), np.array(hint_y)
-    if len(set(hint_y)) < 2:
-        print('Warning: single class in hint labels; skipping.')
-        return {}, None
-    Xtr,Xte,ytr,yte = train_test_split(hint_X,hint_y,test_size=0.3,random_state=42,stratify=hint_y)
-    lr = LogisticRegression(max_iter=1000,random_state=42)
-    lr.fit(Xtr,ytr); p = lr.predict(Xte)
-    a = accuracy_score(yte,p); f = f1_score(yte,p,average='macro')
-    r2 = r2_score(yte, lr.predict_proba(Xte)[:,1])
-    print(f'Hint LR Acc={a:.4f} F1={f:.4f} R2={r2:.4f}')
-    print(classification_report(yte,p,target_names=['Non-Hint','Hint']))
-    return {'hint_acc':a,'hint_f1':f,'hint_r2':r2}, lr
+        if not sents:
+            continue
+        hints = generate_hints(art, q, ans, n_hints=3)
+        combined_hint = ' '.join(hints)
+        gold_refs.append(ans)
+        gen_hints_flat.append(combined_hint)
+
+    if not gold_refs:
+        print('Warning: no hints generated; skipping.')
+        return {}
+    results = evaluate_generation_nlg(gold_refs, gen_hints_flat, task_name='hint')
+    return results

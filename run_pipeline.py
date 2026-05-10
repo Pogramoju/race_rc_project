@@ -62,9 +62,9 @@ def main():
     os.makedirs(MODEL_B_DIR, exist_ok=True)
     os.makedirs(PLOT_DIR, exist_ok=True)
 
-    
+    # ═════════════════════════════════════════════════════════════════════════
     # PHASE 1 — Data Loading & Preprocessing
-    
+    # ═════════════════════════════════════════════════════════════════════════
     print('=' * 70)
     print('PHASE 1 — Data Loading & Preprocessing')
     print('=' * 70)
@@ -192,9 +192,9 @@ def main():
                          'ohe_verify': ohe_verify}, f)
         print('  ✅ All processed data cached.')
 
-    
+    # ═════════════════════════════════════════════════════════════════════════
     # PHASE 2 — Model A Training
-    
+    # ═════════════════════════════════════════════════════════════════════════
     print('\n' + '=' * 70)
     print('PHASE 2 — Model A: Supervised Baselines')
     print('=' * 70)
@@ -247,17 +247,17 @@ def main():
     comp_df, sil_score = build_comparison_table(
         all_metrics_a, Xv_train_norm, kmeans)
 
-    
-    # PHASE 3 — Model B Training & Evaluation
-    
+    # ═════════════════════════════════════════════════════════════════════════
+    # PHASE 3 — Model B: NLG Evaluation
+    # ═════════════════════════════════════════════════════════════════════════
     print('\n' + '=' * 70)
-    print('PHASE 3 — Model B: Distractor & Hint Evaluation')
+    print('PHASE 3 — Model B: Distractor & Hint NLG Evaluation')
     print('=' * 70)
 
-    dist_metrics, dist_cm = evaluate_distractors(test_df, ohe_verify, n_eval=100)
+    dist_metrics = evaluate_distractors(test_df, ohe_verify, n_eval=100)
 
     train_sample = train_df.sample(n=min(20000, len(train_df)), random_state=42)
-    hint_metrics, hint_lr = evaluate_hints(train_sample, n_eval=200)
+    hint_metrics = evaluate_hints(train_sample, n_eval=200)
 
     # ── Distractor Demo ───────────────────────────────────────────────────────
     print('\nDistractor Generation Demo:')
@@ -268,33 +268,26 @@ def main():
     for i, d in enumerate(dists, 1):
         print(f'  Distractor {i}: {d}')
 
-    
-    # PHASE 4 — Test Set Evaluation
-    
+    # ═════════════════════════════════════════════════════════════════════════
+    # PHASE 4 — Test Set NLG Evaluation
+    # ═════════════════════════════════════════════════════════════════════════
     print('\n' + '=' * 70)
-    print('PHASE 4 — Full Test Set Evaluation')
+    print('PHASE 4 — Full Test Set NLG Evaluation (BLEU / ROUGE / METEOR)')
     print('=' * 70)
 
     test_metrics, test_preds, test_proba, yv_test = evaluate_test_set(
-        rf_clf, svm_clf, lr_clf, ohe_verify, test_df)
+        rf_clf, svm_clf, lr_clf, ohe_verify, test_df,
+        generate_question_fn=generate_question)
 
     # ── Dashboard Plot ────────────────────────────────────────────────────────
-    print('\nGenerating analytics dashboard...')
-    plot_dashboard(
-        all_metrics_a,
-        rf_metrics['rf_acc'], svm_metrics['svm_acc'],
-        lr_metrics['lr_acc'], ens_metrics['ens_acc'],
-        rf_metrics['rf_f1'], svm_metrics['svm_f1'],
-        lr_metrics['lr_f1'], ens_metrics['ens_f1'],
-        ens_metrics['ens_prec'], ens_metrics['ens_rec'],
-        test_metrics, test_preds, test_proba, yv_test,
-        cluster_summary, train_df, save_dir=PLOT_DIR
-    )
+    print('\nGenerating NLG analytics dashboard...')
+    all_nlg = {**test_metrics, **dist_metrics, **hint_metrics}
+    plot_dashboard(all_nlg, cluster_summary, train_df, save_dir=PLOT_DIR)
     print(f'  Dashboard saved to {PLOT_DIR}/analytics_dashboard.png')
 
-    
+    # ═════════════════════════════════════════════════════════════════════════
     # PHASE 5 — Save Models & Metrics
-    
+    # ═════════════════════════════════════════════════════════════════════════
     print('\n' + '=' * 70)
     print('PHASE 5 — Saving Models & Metrics')
     print('=' * 70)
@@ -314,17 +307,8 @@ def main():
             pickle.dump(obj, f)
         print(f'  Saved {name} → {path}')
 
-    # ── Model B artifacts → models/model_b/traditional/ ──────────────────
-    model_b_artifacts = {}
-    if hint_lr is not None:
-        model_b_artifacts['hint_lr'] = hint_lr
-    for name, obj in model_b_artifacts.items():
-        path = os.path.join(MODEL_B_DIR, f'{name}.pkl')
-        with open(path, 'wb') as f:
-            pickle.dump(obj, f)
-        print(f'  Saved {name} → {path}')
-    if not model_b_artifacts:
-        print('  (Model B uses heuristic methods — no fitted models to save)')
+    # ── Model B uses heuristic methods — no fitted models to save ────────
+    print('  (Model B uses heuristic methods — no fitted models to save)')
 
     # ── Metrics JSON → models/ ───────────────────────────────────────────
     metrics_json = {
@@ -338,12 +322,11 @@ def main():
         json.dump(metrics_json, f, indent=2, default=str)
     print(f'  Saved metrics → {metrics_path}')
 
-    
+    # ═════════════════════════════════════════════════════════════════════════
     elapsed = time.time() - t_start
     print('\n' + '=' * 70)
     print(f'✅ Pipeline complete in {elapsed:.1f}s')
     print(f'   Model A saved to: {MODEL_A_DIR}/')
-    print(f'   Model B saved to: {MODEL_B_DIR}/')
     print(f'   Metrics saved to: {MODELS_DIR}/metrics.json')
     print(f'   Plots saved to:   {PLOT_DIR}/')
     print(f'   Now run:  streamlit run ui/app.py')
@@ -352,3 +335,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
