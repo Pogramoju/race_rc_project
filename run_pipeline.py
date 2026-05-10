@@ -1,12 +1,3 @@
-"""
-run_pipeline.py — Full RACE ML Pipeline (standalone, no notebook required)
-Replicates the entire notebook workflow using the modular src/ modules.
-
-Usage:
-    cd race_rc_project
-    python run_pipeline.py
-"""
-
 import os, sys, time, json, pickle, warnings, argparse
 import numpy as np
 import pandas as pd
