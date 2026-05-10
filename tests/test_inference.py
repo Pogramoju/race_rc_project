@@ -1,6 +1,3 @@
-"""
-test_inference.py — Unit tests for the inference module.
-"""
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -18,7 +15,7 @@ def test_clean_text():
 
 def test_tokenize():
     tokens = tokenize("The quick brown fox is very fast")
-    assert 'the' not in tokens  # stopword removed
+    assert 'the' not in tokens
     assert 'quick' in tokens
     assert 'brown' in tokens
     print("✅ tokenize passed")

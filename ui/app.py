@@ -1,8 +1,3 @@
-"""
-RACE Quiz System — Streamlit UI
-4 Screens: Article Input, Quiz View, Hint Panel, Analytics Dashboard
-Rubric §6: All 4 screens present; smooth UX; error handling
-"""
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -297,7 +292,6 @@ if not models_loaded:
     st.sidebar.warning("⚠️ Models not found. Run the pipeline first to save models to `models/`.")
 st.sidebar.markdown("---")
 st.sidebar.caption("AL2002 Lab Project — FAST NUCES")
-st.sidebar.caption("⚠️ AI-generated content may contain errors. Verify answers independently.")
 
 # ════════════════════════════════════════════════════════════════════════════
 # SCREEN 1 — Article Input
